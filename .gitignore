@@ -1,0 +1,3 @@
+/target
+# The baked vanilla files: generated from a local game install with `bake-vanilla`.
+/vanilla/

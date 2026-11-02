@@ -1,0 +1,23 @@
+[package]
+name = "shulker"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "Checks Minecraft Bedrock packs and add-ons and reports their diagnostics, rustc style"
+
+default-run = "shulker"
+
+[dependencies]
+bedrock = { git = "https://github.com/bedrock-crustaceans/bedrock-rs", branch = "feat/addon", features = ["addon", "addon-std"] }
+annotate-snippets = "0.12"
+anstream = "1"
+anstyle = "1"
+anyhow = "1"
+brarchive = "0.4"
+clap = { version = "4", features = ["derive"] }
+zstd = { version = "0.14", features = ["zstdmt"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
