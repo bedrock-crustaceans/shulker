@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#7b4bb7" />
+  <title>Shulker — Bedrock Add-On Validator</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="./icon.svg" alt="" class="brand-icon" width="36" height="36" />
+      <div>
+        <div class="brand-row">
+          <h1>Shulker</h1>
+          <span id="version-badge" class="badge">Loading WASM…</span>
+        </div>
+        <p class="subtitle">Minecraft Bedrock add-on, pack &amp; world validator (<code>rustc</code>-style diagnostics)</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button id="install-btn" class="btn btn-secondary" hidden>Install App</button>
+      <button id="theme-btn" class="btn btn-ghost" type="button" title="Toggle light/dark theme">Theme</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card" aria-labelledby="inputs-heading">
+      <div class="card-header">
+        <h2 id="inputs-heading">1. Select Packs, Worlds, or Archives</h2>
+        <span class="hint-text">Everything runs 100% locally in your browser via WebAssembly.</span>
+      </div>
+
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Drop files or folders here">
+        <div class="dropzone-title">Drop <code>.mcworld</code>, <code>.mcaddon</code>, <code>.mcpack</code>, <code>.zip</code> files or BP/RP/world folders here</div>
+        <div class="dropzone-sub">Checked together — pass both your Behavior Pack and Resource Pack to validate cross-pack links.</div>
+        <div class="picker-row">
+          <button id="pick-archives-btn" class="btn btn-primary" type="button">Add Archives (.mcworld / .mcaddon / .mcpack)</button>
+          <button id="pick-bp-btn" class="btn btn-secondary" type="button">Select BP Folder</button>
+          <button id="pick-rp-btn" class="btn btn-secondary" type="button">Select RP Folder</button>
+          <button id="pick-folder-btn" class="btn btn-secondary" type="button">Select World / Packs Folder</button>
+        </div>
+      </div>
+
+      <input id="archives-input" type="file" accept=".mcworld,.mcaddon,.mcpack,.zip,.mctemplate" multiple hidden />
+      <input id="dir-input" type="file" webkitdirectory directory multiple hidden />
+
+      <div id="queue-wrap" class="queue-wrap" hidden>
+        <div class="queue-header">
+          <span id="queue-summary">0 inputs queued</span>
+          <button id="clear-btn" class="btn btn-ghost btn-sm" type="button">Clear All</button>
+        </div>
+        <ul id="queue-list" class="queue-list"></ul>
+      </div>
+
+      <details class="vanilla-details">
+        <summary>
+          <span>Vanilla Game Data (Optional)</span>
+          <span id="vanilla-status" class="pill pill-muted">Not loaded</span>
+        </summary>
+        <div class="vanilla-body">
+          <p>
+            Checking against vanilla lets references to built-in textures, geometries, entities, and UI templates resolve cleanly.
+            Because Mojang's vanilla assets cannot be redistributed here, you can optionally point Shulker at a local Minecraft Bedrock
+            <code>data/</code> folder (the one containing <code>behavior_packs/</code> and <code>resource_packs/</code>).
+            Media files are trimmed to 4&nbsp;KiB headers in your browser.
+          </p>
+          <div class="picker-row">
+            <button id="pick-vanilla-btn" class="btn btn-secondary btn-sm" type="button">Select Minecraft data/ Folder</button>
+            <button id="clear-vanilla-btn" class="btn btn-ghost btn-sm" type="button" hidden>Remove Vanilla Data</button>
+          </div>
+          <input id="vanilla-input" type="file" webkitdirectory directory multiple hidden />
+        </div>
+      </details>
+
+      <div class="options-bar">
+        <label class="field">
+          <span>Min severity</span>
+          <select id="min-severity">
+            <option value="warning" selected>Warning (game default)</option>
+            <option value="error">Error only</option>
+            <option value="info">Info (+ lints)</option>
+            <option value="debug">Debug</option>
+          </select>
+        </label>
+
+        <label class="checkbox-field">
+          <input id="opt-link" type="checkbox" checked />
+          <span>Check references (link pass)</span>
+        </label>
+
+        <label class="checkbox-field">
+          <input id="opt-lints" type="checkbox" checked />
+          <span>Include lints</span>
+        </label>
+
+        <div class="run-actions">
+          <button id="validate-btn" class="btn btn-accent" type="button" disabled>Validate</button>
+        </div>
+      </div>
+
+      <div id="status-bar" class="status-bar" hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="status-text">Working…</span>
+      </div>
+    </section>
+
+    <section id="results-section" class="card" hidden aria-labelledby="results-heading">
+      <div class="results-top">
+        <div>
+          <h2 id="results-heading">Diagnostics</h2>
+          <p id="summary-line" class="summary-line"></p>
+        </div>
+        <div class="results-actions">
+          <button id="revalidate-btn" class="btn btn-secondary btn-sm" type="button">Re-validate</button>
+          <button id="copy-report-btn" class="btn btn-secondary btn-sm" type="button">Copy Plain Report</button>
+        </div>
+      </div>
+
+      <div id="fatal-box" class="fatal-box" hidden></div>
+
+      <div id="packs-strip" class="packs-strip" hidden></div>
+
+      <div class="filter-bar">
+        <div class="severity-tabs" role="group" aria-label="Filter by severity">
+          <button class="tab active" data-sev="all" type="button">All <span id="count-all">0</span></button>
+          <button class="tab" data-sev="error" type="button">Errors <span id="count-error">0</span></button>
+          <button class="tab" data-sev="warning" type="button">Warnings <span id="count-warning">0</span></button>
+          <button class="tab" data-sev="info" type="button">Info <span id="count-info">0</span></button>
+        </div>
+        <select id="pack-filter" class="pack-filter" aria-label="Filter by pack">
+          <option value="all">All packs</option>
+        </select>
+        <input id="search-input" class="search-input" type="search" placeholder="Search code, file, message…" />
+      </div>
+
+      <div id="diagnostics-list" class="diagnostics-list"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Built with <strong>shulker</strong> &amp; <code>bedrock-rs</code> on WebAssembly. Works offline once loaded.</span>
+  </footer>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -68,3 +68,25 @@ bedrock = { path = "../bedrock-rs/bedrock" }
 Keep `smallvec` at `2.0.0-beta.1`: a newer beta breaks `bedrock_addon_support`. After a plain
 `cargo update`, pin it back with
 `cargo update -p smallvec@2.0.0-beta.4 --precise 2.0.0-beta.1` (or whichever beta it moved to).
+
+## Web app (WebAssembly & PWA)
+
+`crates/shulker-wasm` compiles `shulker` to `wasm32-unknown-unknown` for the offline-capable PWA in
+`web/`, which validates `.mcworld`, `.mcaddon`, `.mcpack`, `.zip`, and BP/RP/world folders
+directly in the browser via a Web Worker.
+
+Prerequisites:
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install --locked wasm-bindgen-cli --version 0.2.130
+```
+
+Build and run locally:
+
+```sh
+./scripts/build-web.sh --dev      # or --release for production-sized .wasm
+./scripts/serve-web.py            # opens http://127.0.0.1:8080/
+```
+
+`.github/workflows/pages.yml` builds `web/` with `--release` and deploys it to GitHub Pages.

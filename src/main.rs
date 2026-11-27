@@ -1,10 +1,7 @@
 //! `shulker`: load a Bedrock pack, add-on or world and print every diagnostic, rustc style.
 
 mod bundle;
-mod help;
 mod load;
-mod locate;
-mod names;
 mod render;
 mod status;
 mod vanilla;
@@ -13,9 +10,10 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::Instant;
 
-use bedrock::addon::diagnostic::{Diagnostic, DiagnosticCode, Severity};
+use bedrock::addon::diagnostic::Severity;
 use bedrock::addon::pack::LinkOptions;
 use clap::{Parser, ValueEnum};
+use shulker::diag::is_base_game_absent;
 
 use crate::render::{Renderer, Tally};
 
@@ -139,10 +137,4 @@ fn run(cli: &Cli) -> anyhow::Result<Tally> {
         format!("in {}", status::elapsed(start.elapsed())),
     );
     Ok(tally)
-}
-
-/// The stack asks for the game's own packs (the base-game layer), which are not installed here:
-/// their absence is no finding about the packs being checked.
-fn is_base_game_absent(finding: &Diagnostic) -> bool {
-    matches!(finding.code, DiagnosticCode::PackNotFound { .. }) && finding.location.path.is_none()
 }

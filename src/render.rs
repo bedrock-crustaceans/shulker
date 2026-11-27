@@ -1,18 +1,17 @@
 //! Diagnostics as rustc-style reports, on stderr.
 
 use std::collections::{HashMap, HashSet};
-use std::ops::Range;
 use std::path::{Path, PathBuf};
 
 use annotate_snippets::{AnnotationKind, Group, Level, Origin, Snippet};
 use bedrock::addon::diagnostic::{Diagnostic, DiagnosticCode, JsonPath, Severity};
 use bedrock::addon::pack::{InvalidPack, OpenError, Pack};
 use bedrock::addon::storage::PackPath;
+use shulker::diag::{mark, open_error_help, open_error_text, title};
+use shulker::help;
+use shulker::names;
 
-use crate::help;
 use crate::load::{Loaded, display_path, host_file};
-use crate::locate::{Located, locate};
-use crate::names;
 use crate::status::plural;
 
 /// How many findings of each severity were printed.
@@ -41,13 +40,6 @@ impl SourceFile {
             text: host.and_then(|host| std::fs::read_to_string(host).ok()),
         }
     }
-}
-
-/// The part of a file a finding marks.
-struct Mark {
-    span: Range<usize>,
-    /// The member the finding's JSON path names that the file does not have.
-    missing: Option<String>,
 }
 
 pub struct Renderer<'a> {
@@ -296,36 +288,6 @@ fn level(severity: Severity) -> Level<'static> {
     }
 }
 
-/// The library's message for a finding, with its detail.
-fn title(finding: &Diagnostic) -> String {
-    let title = match finding.detail.as_deref() {
-        Some(detail) => format!("{}{detail}", finding.code),
-        None => finding.code.to_string(),
-    };
-    title.trim().to_owned()
-}
-
-/// What to mark in `text`: the finding's span when the library has one, else where its JSON
-/// path is in the text.
-fn mark(finding: &Diagnostic, text: &str) -> Option<Mark> {
-    if let Some(span) = finding.location.span {
-        return Some(Mark {
-            span: byte_range(text, span.offset, span.len),
-            missing: None,
-        });
-    }
-    if finding.location.json_path.is_empty() {
-        return None;
-    }
-    let located = locate(text, &finding.location.json_path)?;
-    let span = located.span(text, help::marks_value(&finding.code));
-    let missing = match located {
-        Located::Missing { name, .. } => Some(name),
-        Located::Found { .. } => None,
-    };
-    Some(Mark { span, missing })
-}
-
 /// The summary line after all findings: its level and text.
 fn summary(tally: &Tally, packs: usize) -> (Level<'static>, String) {
     let Tally {
@@ -359,57 +321,9 @@ fn summary(tally: &Tally, packs: usize) -> (Level<'static>, String) {
     (level, summary)
 }
 
-/// What went wrong, without the error's own location (we print the host path instead).
-fn open_error_text(error: &OpenError) -> String {
-    match error {
-        OpenError::Unreadable { kind, .. } => format!("cannot read it ({kind})"),
-        OpenError::NoManifest { .. } => "no `manifest.json` found".into(),
-        OpenError::MultipleManifests { count, .. } => {
-            format!("{count} `manifest.json` files at the same depth")
-        }
-        OpenError::InvalidManifest { .. } => "invalid `manifest.json`".into(),
-        _ => error.to_string(),
-    }
-}
-
-fn open_error_help(error: &OpenError) -> String {
-    match error {
-        OpenError::NoManifest { .. } => {
-            "every pack needs a `manifest.json` at its root (or in its single subfolder)".into()
-        }
-        OpenError::MultipleManifests { .. } => {
-            "keep one pack per folder: move each `manifest.json` and its files into a folder of its own".into()
-        }
-        OpenError::InvalidManifest { .. } => "fix the errors in `manifest.json` above".into(),
-        _ => "check that the file is a readable pack archive or folder".into(),
-    }
-}
-
-/// `offset..offset + len` in `text`, at least one character wide and on character boundaries.
-fn byte_range(text: &str, offset: u32, len: u32) -> Range<usize> {
-    let mut start = (offset as usize).min(text.len());
-    while !text.is_char_boundary(start) {
-        start -= 1;
-    }
-    let mut end = start.saturating_add((len as usize).max(1)).min(text.len());
-    while !text.is_char_boundary(end) {
-        end += 1;
-    }
-    start..end
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn a_byte_range_is_widened_onto_character_boundaries() {
-        let text = "a§b";
-        // `§` is two bytes; a span starting in its middle covers all of it.
-        assert_eq!(byte_range(text, 2, 1), 1..3);
-        assert_eq!(byte_range(text, 0, 0), 0..1);
-        assert_eq!(byte_range(text, 9, 4), 4..4);
-    }
 
     #[test]
     fn the_summary_counts_each_severity() {
