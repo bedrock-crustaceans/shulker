@@ -1,0 +1,30 @@
+{
+  "name": "Shulker — Bedrock Add-On Validator",
+  "short_name": "Shulker",
+  "description": "Validate Minecraft Bedrock .mcworld, .mcaddon, .mcpack files and BP/RP folders offline in your browser.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#13101c",
+  "theme_color": "#7b4bb7",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

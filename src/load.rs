@@ -14,7 +14,7 @@ use bedrock::addon::pack::{
 use bedrock::addon::storage::PackPath;
 use bedrock::addon_std::{DirSource, Driver, LoadError, Options, read_world_packs};
 
-use crate::names;
+use shulker::names;
 use crate::status::{plural, status};
 use crate::vanilla;
 

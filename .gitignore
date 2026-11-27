@@ -1,3 +1,5 @@
 /target
 # The baked vanilla files: generated from a local game install with `bake-vanilla`.
 /vanilla/
+# Generated WASM bindings for the web PWA (`scripts/build-web.sh`).
+/web/pkg/

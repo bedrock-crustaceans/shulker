@@ -4,18 +4,35 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.98"
 description = "Checks Minecraft Bedrock packs and add-ons and reports their diagnostics, rustc style"
-
 default-run = "shulker"
 
+[workspace]
+members = [".", "crates/shulker-wasm"]
+default-members = ["."]
+
+[features]
+default = ["cli"]
+cli = ["bedrock/addon-std", "dep:anstream", "dep:anstyle", "dep:clap", "dep:zstd"]
+
+[[bin]]
+name = "shulker"
+path = "src/main.rs"
+required-features = ["cli"]
+
+[[bin]]
+name = "bake-vanilla"
+path = "src/bin/bake-vanilla.rs"
+required-features = ["cli"]
+
 [dependencies]
-bedrock = { git = "https://github.com/bedrock-crustaceans/bedrock-rs", branch = "feat/addon", features = ["addon", "addon-std"] }
+bedrock = { git = "https://github.com/bedrock-crustaceans/bedrock-rs", branch = "feat/addon", features = ["addon"] }
 annotate-snippets = "0.12"
-anstream = "1"
-anstyle = "1"
+anstream = { version = "1", optional = true }
+anstyle = { version = "1", optional = true }
 anyhow = "1"
 brarchive = "0.4"
-clap = { version = "4", features = ["derive"] }
-zstd = { version = "0.14", features = ["zstdmt"] }
+clap = { version = "4", features = ["derive"], optional = true }
+zstd = { version = "0.14", features = ["zstdmt"], optional = true }
 
 [profile.release]
 lto = true
